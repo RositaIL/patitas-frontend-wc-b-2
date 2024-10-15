@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import pe.edu.cibertec.patitas_frontend_wc.dto.LoginRequestDTO;
 import pe.edu.cibertec.patitas_frontend_wc.dto.LoginResponseDTO;
+import pe.edu.cibertec.patitas_frontend_wc.dto.LogoutRequestDTO;
+import pe.edu.cibertec.patitas_frontend_wc.dto.LogoutResponseDTO;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -52,4 +54,35 @@ public class LoginControllerAsync {
 
     }
 
+    //Se agregó: método de logoutUsuario
+    @PostMapping("/logout-async")
+    public Mono<LogoutResponseDTO> logoutUsuario(@RequestBody LogoutRequestDTO logoutRequestDTO) {
+
+        // validar campos de entrada
+        if (logoutRequestDTO.tipoDocumento() == null || logoutRequestDTO.tipoDocumento().trim().length() == 0 ||
+                logoutRequestDTO.numeroDocumento() == null || logoutRequestDTO.numeroDocumento().trim().length() == 0) {
+            return Mono.just(new LogoutResponseDTO(false, null, "Error: faltan parametros para ejecutar el logout"));
+        }
+
+        try {
+            // consumir servicio backend de logout
+            return webClientAutenticacion.post()
+                    .uri("/logout")
+                    .body(Mono.just(logoutRequestDTO), LogoutRequestDTO.class)
+                    .retrieve()
+                    .bodyToMono(LogoutResponseDTO.class)
+                    .flatMap(response -> {
+                        if (response.resultado()) {
+                            return Mono.just(new LogoutResponseDTO(true, response.fecha(), ""));
+                        } else {
+                            return Mono.just(new LogoutResponseDTO(false, null, "Error: No se pudo pudo ejecutar el logout correctamente"));
+                        }
+                    });
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return Mono.just(new LogoutResponseDTO(false, null, "Error: Ocurrió un problema al intentar cerrar sesión"));
+        }
+    }
 }
+
